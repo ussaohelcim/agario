@@ -1,4 +1,6 @@
-param($squareAmount)
+param(
+    [int]$script:squareAmount
+    )
 Add-Type -Path '.\engine.dll'
 
 $engine = New-Object engine.Functions 
@@ -24,20 +26,18 @@ $player = [engine.Rectangle2D]::GetNew(0,0,20*$helpplayer.size,20*$helpplayer.si
 
 [System.Collections.ArrayList]$squares = @()
 
+[int]$script:numSquaresEaten = 0
 
-
-for ($i = 0; $i -lt $squareAmount; $i++) {
+for ($i = 0; $i -lt $squareAmount; $i++) { #create squares
     $engine.DrawFrame();
     $engine.ClearFrameBackground();
     $engine.DrawText("Loading squares: $i/$squareAmount",20,$w/2,$h/2)
     $engine.ClearFrame();
-    if($engine.IsAskingToCloseWindow()){
-        break
-        $engine.CloseWindow();
-    }
 
     Write-Progress -Activity "Creating squares" -Status "$i/$squareAmount"
+
     $tam = (5..300 | Get-Random)
+    #list.add returns list.count to null
     $null = $squares.Add([engine.Rectangle2D]::GetNew((-3000..3000 | Get-Random),(-3000..3000 | Get-Random),$tam,$tam,(0..250 | Get-Random),(0..250 | Get-Random),(0..250 | Get-Random),250))   
 }
 
@@ -47,7 +47,9 @@ $cam.UpdateOffset($w/2,$h/2)
 
 $cam.UpdateZoom(1)
 $cam.UpdateRotation(0)
-Write-Host $squares.Count
+
+
+$engine.SetTitleWindow("agario $numSquaresEaten/$squareAmount")
 
 [System.Collections.ArrayList]$circles = @() #[engine.Ball2D]::GetNew($w/2,$h/2,1,0,0,0,250)
 
@@ -95,27 +97,25 @@ while(!$engine.IsAskingToCloseWindow()) {#main loop
         $b.DrawLine()
     }
 
-    foreach($square in $squares)
-    {
-        $square.Draw()
-        if($square.IsCollidingWithRectangle2D($player) -and $player.altura -gt $square.altura)
+    for ($i = 0; $i -lt $squares.Count; $i++) {
+        if($null -ne $squares[$i])
         {
-            $helpplayer.size += 0.1
+            $squares[$i].Draw()
+            if($squares[$i].IsCollidingWithRectangle2D($player) -and $player.altura -gt $squares[$i].altura)
+            {
+                $helpplayer.size += 0.1
 
-            $cam.UpdateZoom($cam.camera.zoom-0.1)
+                $cam.UpdateZoom($cam.camera.zoom-0.1)
 
-            $player = [engine.Rectangle2D]::GetNew($player.PosX,$player.PosY,20*$helpplayer.size,20*$helpplayer.size,250,0,0,250)
-              
-            $squares.Remove($square)
+                $player = [engine.Rectangle2D]::GetNew($player.PosX,$player.PosY,20*$helpplayer.size,20*$helpplayer.size,250,0,0,250)
 
-            $s = "agario " + ($squareAmount-$squares.Count) + "/$squareAmount"
+                $squares[$i] = $null
 
-            $engine.SetTitleWindow($s)
-            
-            break
-            
+                $numSquaresEaten++
+
+                $engine.SetTitleWindow("agario $numSquaresEaten/$squareAmount")                
+            }
         }
-        
     }
 
     $player.Draw()
